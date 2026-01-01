@@ -1,0 +1,11 @@
+merchant_id,merchant_name,merchant_category,country
+m001,Amazon,ecommerce,US
+m002,Netflix,subscription,US
+m003,AliExpress,ecommerce,CN
+m004,Uber,mobility,US
+m005,Spotify,subscription,SE
+m006,LocalMart,retail,PK
+m007,GameStore,digital_goods,US
+m008,Airbnb,travel,US
+m009,FoodNow,food_delivery,GB
+m010,BetFast,high_risk,MT

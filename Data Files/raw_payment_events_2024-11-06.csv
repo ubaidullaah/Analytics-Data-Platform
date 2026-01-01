@@ -1,0 +1,5 @@
+payment_event_id,payment_id,user_id,merchant_id,amount,currency,event_ts,status,failure_reason,payment_method,attempt_number
+e006,p004,u004,m004,18.75,EUR,2024-11-06T09:15:00Z,captured,,card,1
+e007,p005,u005,m006,5400.00,PKR,2024-11-06T10:10:00Z,captured,,bank_transfer,1
+e008,p006,u006,m010,300.00,USD,2024-11-06T11:05:00Z,failed,network_error,card,1
+e009,p006,u006,m010,300.00,USD,2024-11-06T11:07:00Z,captured,,card,2

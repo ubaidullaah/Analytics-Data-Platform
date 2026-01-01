@@ -1,0 +1,11 @@
+user_id,created_at,country,kyc_level,marketing_channel
+u001,2024-11-01T10:12:00Z,US,level_1,google
+u002,2024-11-01T11:45:00Z,US,level_2,organic
+u003,2024-11-02T09:20:00Z,GB,level_1,facebook
+u004,2024-11-02T13:05:00Z,DE,level_3,google
+u005,2024-11-03T08:55:00Z,PK,level_1,tiktok
+u006,2024-11-03T12:30:00Z,PK,level_2,organic
+u007,2024-11-04T14:10:00Z,US,level_1,affiliate
+u008,2024-11-04T16:40:00Z,FR,level_2,google
+u009,2024-11-05T09:00:00Z,GB,level_3,organic
+u010,2024-11-05T10:15:00Z,US,level_1,facebook

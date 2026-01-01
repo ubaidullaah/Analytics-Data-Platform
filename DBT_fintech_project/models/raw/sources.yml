@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: raw_users
+    database: FINTECH_DW
+    schema: RAW
+    tables:
+      - name: RAW_USERS
+  - name: raw_merchants
+    database: FINTECH_DW
+    schema: RAW
+    tables:
+      - name: RAW_MERCHANTS
+  - name: raw_device_fingerprints
+    database: FINTECH_DW
+    schema: RAW
+    tables:
+      - name: RAW_DEVICE_FINGERPRINTS
+  - name: raw_payment_events
+    database: FINTECH_DW
+    schema: RAW
+    tables:
+      - name: RAW_PAYMENT_EVENTS
+  - name: raw_chargebacks
+    database: FINTECH_DW
+    schema: RAW
+    tables:
+      - name: RAW_CHARGEBACKS
+  - name: raw_fx_rates_daily
+    database: FINTECH_DW
+    schema: RAW
+    tables:
+      - name: RAW_FX_RATES_DAILY

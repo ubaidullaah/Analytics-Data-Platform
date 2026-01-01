@@ -1,0 +1,6 @@
+payment_event_id,payment_id,user_id,merchant_id,amount,currency,event_ts,status,failure_reason,payment_method,attempt_number
+e001,p001,u001,m001,120.50,USD,2024-11-05T10:01:00Z,failed,insufficient_funds,card,1
+e002,p001,u001,m001,120.50,USD,2024-11-05T10:03:00Z,captured,,card,2
+e003,p002,u002,m002,15.99,USD,2024-11-05T11:00:00Z,captured,,wallet,1
+e004,p003,u003,m010,250.00,GBP,2024-11-05T12:20:00Z,failed,stolen_card,card,1
+e005,p003,u003,m010,250.00,GBP,2024-11-05T12:22:00Z,failed,stolen_card,card,2

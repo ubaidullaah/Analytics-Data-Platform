@@ -1,0 +1,2 @@
+chargeback_id,payment_id,opened_ts,resolved_ts,outcome
+cb001,p003,2024-11-10T09:00:00Z,2024-11-18T15:00:00Z,lost

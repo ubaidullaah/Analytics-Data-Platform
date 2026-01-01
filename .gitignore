@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Airflow
+Airflow/logs/
+Airflow/__pycache__/
+*.log
+airflow.db
+airflow.cfg
+
+# DBT
+DBT_fintech_project/target/
+DBT_fintech_project/dbt_packages/
+DBT_fintech_project/logs/
+DBT_fintech_project/dbt_internal_packages/
+DBT_fintech_project/profiles.yml
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.env
+secrets/
+*.pem
+*.key
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Data files (optional - uncomment if you don't want to track data files)
+# Data Files/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Snowflake
+snowflake_connection.json
+
+# Credentials
+credentials.json
+config.json
+
