@@ -15,7 +15,4 @@ select
     merchant_category,
     country
 from {{ source('raw_merchants', 'RAW_MERCHANTS') }}
-qualify row_number() over (
-    partition by merchant_id 
-    order by merchant_id
-) = 1
+qualify {{ deduplicate('merchant_id', 'merchant_id') }}

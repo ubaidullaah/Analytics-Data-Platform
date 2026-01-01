@@ -24,7 +24,4 @@ select
     src_file_name,
     src_loaded_at
 from raw_data
-qualify row_number() over (
-    partition by chargeback_id 
-    order by src_loaded_at desc, resolved_ts desc nulls last
-) = 1
+qualify {{ deduplicate('chargeback_id', 'src_loaded_at desc, resolved_ts desc nulls last') }}

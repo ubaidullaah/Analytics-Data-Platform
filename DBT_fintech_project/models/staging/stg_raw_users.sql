@@ -22,7 +22,4 @@ select
     kyc_level,
     marketing_channel
 from raw_data
-qualify row_number() over (
-    partition by user_id 
-    order by created_at desc
-) = 1
+qualify {{ deduplicate('user_id', 'created_at desc') }}

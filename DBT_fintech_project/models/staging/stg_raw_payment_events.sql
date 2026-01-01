@@ -29,7 +29,4 @@ select
     src_file_name,
     src_loaded_at
 from raw_data
-qualify row_number() over (
-    partition by payment_event_id 
-    order by src_loaded_at desc, event_ts desc
-) = 1
+qualify {{ deduplicate('payment_event_id', 'src_loaded_at desc, event_ts desc') }}
