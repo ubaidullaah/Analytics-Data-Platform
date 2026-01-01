@@ -22,7 +22,4 @@ select
     last_seen_ts,
     ip_address
 from raw_data
-qualify row_number() over (
-    partition by user_id, device_id 
-    order by last_seen_ts desc, first_seen_ts asc
-) = 1
+qualify {{ deduplicate(['user_id', 'device_id'], 'last_seen_ts desc, first_seen_ts asc') }}
