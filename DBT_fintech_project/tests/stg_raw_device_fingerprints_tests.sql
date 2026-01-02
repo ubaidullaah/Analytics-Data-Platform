@@ -16,8 +16,7 @@ union all
 
 -- Test to ensure that (user_id, device_id) combination is unique (after deduplication)
 select 
-    user_id,
-    device_id
+    user_id || '|' || device_id as user_id
 from {{ ref('stg_raw_device_fingerprints') }}
 group by user_id, device_id
 having count(*) > 1
