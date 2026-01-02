@@ -4,9 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
 build/
 develop-eggs/
 dist/
@@ -22,32 +19,35 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.venv
+venv/
+ENV/
+env/
 
 # Airflow
 Airflow/logs/
 Airflow/__pycache__/
-*.log
-airflow.db
-airflow.cfg
+Airflow/dags/__pycache__/
+*.airflowignore
 
 # DBT
 DBT_fintech_project/target/
 DBT_fintech_project/dbt_packages/
 DBT_fintech_project/logs/
-DBT_fintech_project/dbt_internal_packages/
+DBT_fintech_project/.dbt/
 DBT_fintech_project/profiles.yml
+.dbt/
 
-# Environment variables and secrets
+# Environment variables
 .env
 .env.local
 .env.*.local
 *.env
-secrets/
-*.pem
-*.key
-
-# Docker
-.dockerignore
 
 # IDE
 .vscode/
@@ -57,26 +57,30 @@ secrets/
 *~
 .DS_Store
 
+# Docker
+.dockerignore
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
 # OS
 Thumbs.db
 .DS_Store
-desktop.ini
+
+# GitHub Actions artifacts (keep workflow files)
+!.github/workflows/
 
 # Data files (optional - uncomment if you don't want to track data files)
 # Data Files/
-
-# Temporary files
-*.tmp
-*.temp
-.cache/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Snowflake
-snowflake_connection.json
-
-# Credentials
-credentials.json
-config.json
-
