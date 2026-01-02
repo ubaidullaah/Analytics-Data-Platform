@@ -16,6 +16,7 @@
 - Runs DBT tests if:
   - It's a pull request, OR
   - Commit message contains `[run-dbt-tests]`
+- **Runs against TEST schema** (industry best practice)
 - Requires Snowflake test environment secrets
 - Skips if secrets not configured
 
@@ -30,51 +31,166 @@
 **Runs on:** Push to `main` or manual trigger
 
 **What it does:**
-- **Pre-deployment:** Runs DBT tests against staging environment
+- **Pre-deployment:** Runs DBT tests against **STAGING** schema (industry best practice)
 - **Deployment:** Deploys to production (customize deployment commands)
-- DBT models run via Airflow after deployment
+- **Production:** DBT models run via Airflow DAG in ANALYTICS schema (scheduled)
 
-## DBT Best Practices Implemented
+## Industry Best Practices for DBT Testing
 
-### ✅ In CI (Fast, No Connection Required)
-1. **Syntax Validation** - `dbt parse` validates SQL syntax
-2. **Package Validation** - `dbt deps` ensures packages are valid
-3. **Project Structure** - Validates `dbt_project.yml`
+### ✅ Recommended Approach (What We Implement)
 
-### ✅ In CI (Optional, Requires Test DB)
-4. **DBT Tests** - Run data quality tests against test environment
-   - Only runs on PRs or when explicitly requested
-   - Requires Snowflake test credentials
+1. **CI Tests → TEST Schema**
+   - Isolated test environment
+   - Safe for experimentation
+   - No risk to production data
 
-### ✅ In Deployment
-5. **Pre-deployment Tests** - Run DBT tests against staging
-6. **Production Runs** - Handled by Airflow DAG (scheduled)
+2. **Pre-Deployment Tests → STAGING Schema**
+   - Validates against realistic data
+   - Final check before production
+   - Catches issues early
+
+3. **Production Runs → ANALYTICS Schema**
+   - Handled by Airflow (scheduled)
+   - Not run in CI/CD
+   - Production data integrity maintained
+
+### ❌ What We DON'T Do (Anti-Patterns)
+
+- ❌ **Never test directly against production in CI/CD**
+  - Risk of data corruption
+  - Performance impact on production
+  - Can block deployments unnecessarily
+
+- ❌ **Never run full DBT runs in CI**
+  - Too slow/expensive
+  - Unnecessary for validation
+
+### 📊 Environment Strategy
+
+```
+┌─────────────┐
+│   CI/CD     │
+│             │
+│  TEST Schema│ ← Fast, isolated tests
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Deployment │
+│             │
+│ STAGING     │ ← Pre-production validation
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Production │
+│             │
+│ ANALYTICS   │ ← Airflow runs DBT (scheduled)
+└─────────────┘
+```
+
+## Setting Up Test Environment
+
+### Option 1: Snowflake Zero-Copy Cloning (Recommended - No Data Insertion!)
+
+**Best approach** - Uses Snowflake's zero-copy cloning (no storage cost, instant):
+
+```sql
+-- Clone the entire RAW schema (zero storage cost)
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST_RAW 
+  CLONE FINTECH_DW.RAW;
+
+-- Clone ANALYTICS schema for testing
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST 
+  CLONE FINTECH_DW.ANALYTICS;
+
+-- Or clone specific tables
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_USERS 
+  CLONE FINTECH_DW.RAW.RAW_USERS;
+```
+
+**Benefits:**
+- ✅ **No data insertion needed** - instant clone
+- ✅ **Zero storage cost** - only metadata stored
+- ✅ **Always up-to-date** - can refresh before tests
+- ✅ **Industry standard** - used by most companies
+
+### Option 2: Subset of Production Data
+
+If cloning isn't available, use a small subset:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST_RAW;
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST;
+
+-- Copy sample data (last 30 days, for example)
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_USERS AS
+SELECT * FROM FINTECH_DW.RAW.RAW_USERS 
+WHERE created_at >= DATEADD(day, -30, CURRENT_DATE());
+```
+
+### Option 3: Skip CI Tests (Simplest)
+
+If you don't want to set up test environment:
+- DBT tests in CI will be skipped (non-blocking)
+- Only syntax validation runs (no connection needed)
+- Tests run only in staging before deployment
+
+**Update DBT profile to use cloned schemas:**
+
+```yaml
+# In your DBT profile or via secrets
+test:
+  schema: TEST
+  # Sources will need to point to TEST_RAW schema
+```
 
 ## Required Secrets
 
 ### For DBT Testing (Optional)
+
+**Test Environment (CI):**
 - `SNOWFLAKE_ACCOUNT` - Snowflake account
 - `SNOWFLAKE_USER` - Snowflake username  
 - `SNOWFLAKE_PASSWORD` - Snowflake password
 - `SNOWFLAKE_WAREHOUSE` - Snowflake warehouse
 - `SNOWFLAKE_DATABASE` - Database name (default: FINTECH_DW)
 - `SNOWFLAKE_TEST_SCHEMA` - Test schema (default: TEST)
+
+**Staging Environment (Deployment):**
 - `SNOWFLAKE_STAGING_SCHEMA` - Staging schema (default: STAGING)
+- (Uses same account/user/password/warehouse as test)
 
 **Note:** Workflows will skip DBT tests if secrets are not configured.
 
-## Industry Best Practices
+## Setup Instructions
 
-### ✅ What We Do
-- **Fast CI checks** - Syntax validation without connection
-- **Optional test runs** - Only when needed/requested
-- **Staging validation** - Test before production
-- **Separation of concerns** - CI validates, Airflow runs
+### Quick Setup with Cloning (Recommended)
 
-### ✅ What We Don't Do (By Design)
-- ❌ Full DBT run in CI (too slow/expensive)
-- ❌ Production DBT runs in CI/CD (handled by Airflow)
-- ❌ Blocking on test DB availability (optional)
+```sql
+-- 1. Clone RAW schema for test sources
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST_RAW 
+  CLONE FINTECH_DW.RAW;
+
+-- 2. Create empty TEST schema for DBT models
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST;
+
+-- 3. Update DBT sources.yml to use TEST_RAW in test environment
+-- (or use dbt's source override feature)
+```
+
+### Alternative: Use Staging for Both
+
+If you only want one test environment:
+
+```sql
+-- Use STAGING for both CI and pre-deployment tests
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.STAGING_RAW 
+  CLONE FINTECH_DW.RAW;
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.STAGING;
+```
+
+Then set both `SNOWFLAKE_TEST_SCHEMA` and `SNOWFLAKE_STAGING_SCHEMA` to `STAGING`.
 
 ## Usage
 
@@ -87,9 +203,16 @@ git commit -m "Update DBT models [run-dbt-tests]"
 ### Manual Deployment
 Go to Actions → Deploy → Run workflow
 
-## Customization
+## Why This Approach?
 
-Edit the workflows to match your deployment process:
-- Update deployment commands in `deploy.yml`
-- Adjust DBT test conditions in `ci.yml`
-- Modify environment schemas as needed
+### ✅ Benefits
+- **Safety**: No risk to production data
+- **Speed**: Fast CI with isolated test environment
+- **Reliability**: Staging validation before production
+- **Cost-effective**: Zero-copy cloning = no storage cost
+- **Industry Standard**: Follows dbt Labs recommendations
+
+### 📚 References
+- [dbt Labs: Modern Deployment Strategies](https://www.getdbt.com/blog/modern-deployment-strategies-for-analytics-workflows)
+- [Snowflake Zero-Copy Cloning](https://docs.snowflake.com/en/user-guide/object-clone)
+- [dbt Best Practices](https://docs.getdbt.com/guides/best-practices)

@@ -1,0 +1,70 @@
+-- Setup Script for Test Environment
+-- Run this in Snowflake to set up test schemas using zero-copy cloning
+
+-- Option 1: Clone entire schemas (Recommended - Zero storage cost)
+-- ================================================================
+
+-- Clone RAW schema for source data (zero-copy, no storage cost)
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST_RAW 
+  CLONE FINTECH_DW.RAW;
+
+-- Create TEST schema for DBT models
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST;
+
+-- Grant necessary permissions
+GRANT USAGE ON SCHEMA FINTECH_DW.TEST_RAW TO ROLE YOUR_ROLE;
+GRANT USAGE ON SCHEMA FINTECH_DW.TEST TO ROLE YOUR_ROLE;
+GRANT SELECT ON ALL TABLES IN SCHEMA FINTECH_DW.TEST_RAW TO ROLE YOUR_ROLE;
+GRANT ALL ON SCHEMA FINTECH_DW.TEST TO ROLE YOUR_ROLE;
+
+-- Option 2: Clone specific tables (if you only need some tables)
+-- ===============================================================
+/*
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST_RAW;
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST;
+
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_USERS 
+  CLONE FINTECH_DW.RAW.RAW_USERS;
+
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_MERCHANTS 
+  CLONE FINTECH_DW.RAW.RAW_MERCHANTS;
+
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_PAYMENT_EVENTS 
+  CLONE FINTECH_DW.RAW.RAW_PAYMENT_EVENTS;
+
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_CHARGEBACKS 
+  CLONE FINTECH_DW.RAW.RAW_CHARGEBACKS;
+
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_DEVICE_FINGERPRINTS 
+  CLONE FINTECH_DW.RAW.RAW_DEVICE_FINGERPRINTS;
+
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_FX_RATES_DAILY 
+  CLONE FINTECH_DW.RAW.RAW_FX_RATES_DAILY;
+*/
+
+-- Option 3: Use subset of data (if cloning not available)
+-- =========================================================
+/*
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST_RAW;
+CREATE SCHEMA IF NOT EXISTS FINTECH_DW.TEST;
+
+-- Copy last 30 days of data
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_USERS AS
+SELECT * FROM FINTECH_DW.RAW.RAW_USERS 
+WHERE created_at >= DATEADD(day, -30, CURRENT_DATE());
+
+-- Copy all merchants (usually small)
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_MERCHANTS AS
+SELECT * FROM FINTECH_DW.RAW.RAW_MERCHANTS;
+
+-- Copy recent payment events
+CREATE TABLE FINTECH_DW.TEST_RAW.RAW_PAYMENT_EVENTS AS
+SELECT * FROM FINTECH_DW.RAW.RAW_PAYMENT_EVENTS 
+WHERE event_ts >= DATEADD(day, -30, CURRENT_DATE());
+*/
+
+-- Refresh cloned data before tests (optional - run periodically)
+-- ==============================================================
+-- DROP SCHEMA IF EXISTS FINTECH_DW.TEST_RAW;
+-- CREATE SCHEMA FINTECH_DW.TEST_RAW CLONE FINTECH_DW.RAW;
+
