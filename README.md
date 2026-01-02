@@ -322,6 +322,64 @@ dbt test
 - **Airflow UI**: Monitor DAG runs, task logs, and execution history
 - **Snowflake**: Query execution history and warehouse usage
 - **DBT**: Check run results in `DBT_fintech_project/target/run_results.json`
+- **CI/CD**: Monitor workflow runs in GitHub Actions tab
+
+## 🚀 CI/CD Pipeline
+
+This project includes a comprehensive CI/CD pipeline using GitHub Actions:
+
+### Workflows
+
+- **CI - Code Quality & Testing**: Runs on every push/PR
+  - Python linting (Black, Flake8, isort, Pylint)
+  - Airflow DAG validation
+  - SQL linting
+  - DBT compilation
+  - YAML validation
+  - Dockerfile validation
+  - Security scanning
+
+- **DBT - Test & Validate**: Runs when DBT files change
+  - DBT model compilation
+  - DBT tests
+  - SQL linting
+
+- **Docker Build & Test**: Runs when Docker files change
+  - Docker image build
+  - Image testing
+  - Vulnerability scanning
+
+- **Security Scanning**: Runs on push/PR and weekly
+  - Dependency vulnerability scanning
+  - Code security analysis
+  - Secret scanning
+  - Container security scanning
+
+- **Deploy**: Runs on push to `main` or manual trigger
+  - Pre-deployment checks
+  - Production image build
+  - Staging deployment
+  - Production deployment
+  - Automatic rollback on failure
+
+### Setup
+
+See [CI/CD Setup Guide](.github/SETUP_CI_CD.md) for detailed setup instructions.
+
+### Quick Start
+
+1. Ensure GitHub Actions are enabled in repository settings
+2. Configure required secrets (see `.github/SETUP_CI_CD.md`)
+3. Set up GitHub Environments for deployment
+4. Push to `main` or `develop` to trigger workflows
+
+### Workflow Status
+
+Workflows run automatically on:
+- Push to `main` or `develop` branches
+- Pull requests to `main` or `develop`
+- Manual workflow dispatch (where supported)
+- Scheduled runs (security scans)
 
 ## 🐛 Troubleshooting
 
