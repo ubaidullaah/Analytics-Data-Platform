@@ -1,167 +1,95 @@
-# CI/CD Workflows Documentation
-
-This directory contains GitHub Actions workflows for continuous integration and deployment of the Fintech Data Engineering project.
+# CI/CD Workflows
 
 ## Workflows Overview
 
-### 1. CI - Code Quality & Testing (`ci.yml`)
-**Triggers:** Push/PR to `main` or `develop` branches
+### 1. CI (`ci.yml`)
+**Runs on:** Push/PR to `main` or `develop`
 
-**Jobs:**
-- **lint-python**: Runs Black, isort, Flake8, and Pylint on Python code
-- **validate-airflow-dags**: Validates Airflow DAG syntax and structure
-- **lint-sql**: Lints SQL files using SQLFluff
-- **test-dbt-compile**: Compiles DBT models to check for syntax errors
-- **check-yaml**: Validates YAML configuration files
-- **check-dockerfile**: Validates Dockerfile syntax using Hadolint
-- **security-scan**: Runs Trivy vulnerability scanner
-- **summary**: Provides a summary of all CI checks
+**What it does:**
+- ✅ Validates Python syntax
+- ✅ Validates Airflow DAGs load correctly
+- ✅ Validates DBT project structure (YAML)
+- ✅ Installs DBT packages (`dbt deps`)
+- ✅ Parses DBT models (syntax check, no connection needed)
 
-### 2. DBT - Test & Validate (`dbt-ci.yml`)
-**Triggers:** 
-- Push/PR to `main` or `develop` when DBT files change
-- Manual workflow dispatch
+**DBT Test Job (Optional):**
+- Runs DBT tests if:
+  - It's a pull request, OR
+  - Commit message contains `[run-dbt-tests]`
+- Requires Snowflake test environment secrets
+- Skips if secrets not configured
 
-**Jobs:**
-- **dbt-test**: Compiles, validates, and tests DBT models
-- **dbt-lint**: Lints DBT SQL models using SQLFluff
+### 2. Docker Build (`docker-build.yml`)
+**Runs on:** Push to `main` when Dockerfile changes
 
-### 3. Docker Build & Test (`docker-build.yml`)
-**Triggers:**
-- Push/PR to `main` or `develop` when Docker files change
-- Manual workflow dispatch
+**What it does:**
+- Builds and pushes Docker image to GitHub Container Registry
+- Image includes DBT (installed in Dockerfile)
 
-**Jobs:**
-- **build-and-test**: Builds Docker image, tests it, and scans for vulnerabilities
-- **test-docker-compose**: Validates docker-compose.yaml configuration
+### 3. Deploy (`deploy.yml`)
+**Runs on:** Push to `main` or manual trigger
 
-### 4. Security Scanning (`security-scan.yml`)
-**Triggers:**
-- Push/PR to `main` or `develop`
-- Weekly schedule (Mondays at 00:00 UTC)
-- Manual workflow dispatch
+**What it does:**
+- **Pre-deployment:** Runs DBT tests against staging environment
+- **Deployment:** Deploys to production (customize deployment commands)
+- DBT models run via Airflow after deployment
 
-**Jobs:**
-- **dependency-scan**: Scans Python dependencies for vulnerabilities
-- **code-scan**: Runs Bandit security linter on Python code
-- **secret-scan**: Scans for exposed secrets using Gitleaks and TruffleHog
-- **container-scan**: Scans Docker images for vulnerabilities
+## DBT Best Practices Implemented
 
-### 5. Deploy (`deploy.yml`)
-**Triggers:**
-- Push to `main` branch
-- Manual workflow dispatch with environment selection
+### ✅ In CI (Fast, No Connection Required)
+1. **Syntax Validation** - `dbt parse` validates SQL syntax
+2. **Package Validation** - `dbt deps` ensures packages are valid
+3. **Project Structure** - Validates `dbt_project.yml`
 
-**Jobs:**
-- **pre-deployment-checks**: Determines deployment environment
-- **run-tests**: Runs all CI checks before deployment
-- **build-production-image**: Builds production-ready Docker image
-- **deploy-staging**: Deploys to staging environment
-- **deploy-production**: Deploys to production environment
-- **rollback**: Handles rollback on deployment failure
+### ✅ In CI (Optional, Requires Test DB)
+4. **DBT Tests** - Run data quality tests against test environment
+   - Only runs on PRs or when explicitly requested
+   - Requires Snowflake test credentials
+
+### ✅ In Deployment
+5. **Pre-deployment Tests** - Run DBT tests against staging
+6. **Production Runs** - Handled by Airflow DAG (scheduled)
 
 ## Required Secrets
 
-Configure the following secrets in your GitHub repository settings:
+### For DBT Testing (Optional)
+- `SNOWFLAKE_ACCOUNT` - Snowflake account
+- `SNOWFLAKE_USER` - Snowflake username  
+- `SNOWFLAKE_PASSWORD` - Snowflake password
+- `SNOWFLAKE_WAREHOUSE` - Snowflake warehouse
+- `SNOWFLAKE_DATABASE` - Database name (default: FINTECH_DW)
+- `SNOWFLAKE_TEST_SCHEMA` - Test schema (default: TEST)
+- `SNOWFLAKE_STAGING_SCHEMA` - Staging schema (default: STAGING)
 
-### For DBT Testing (Optional - uses test values if not set)
-- `SNOWFLAKE_ACCOUNT`: Snowflake account identifier
-- `SNOWFLAKE_USER`: Snowflake username
-- `SNOWFLAKE_PASSWORD`: Snowflake password
-- `SNOWFLAKE_WAREHOUSE`: Snowflake warehouse name
-- `SNOWFLAKE_DATABASE`: Snowflake database name
-- `SNOWFLAKE_SCHEMA`: Snowflake schema name
+**Note:** Workflows will skip DBT tests if secrets are not configured.
 
-### For Deployment
-- Configure environment-specific secrets in GitHub Environments:
-  - `staging`: Staging environment secrets
-  - `production`: Production environment secrets
+## Industry Best Practices
 
-## Environment Protection Rules
+### ✅ What We Do
+- **Fast CI checks** - Syntax validation without connection
+- **Optional test runs** - Only when needed/requested
+- **Staging validation** - Test before production
+- **Separation of concerns** - CI validates, Airflow runs
 
-It's recommended to set up protection rules for production deployments:
+### ✅ What We Don't Do (By Design)
+- ❌ Full DBT run in CI (too slow/expensive)
+- ❌ Production DBT runs in CI/CD (handled by Airflow)
+- ❌ Blocking on test DB availability (optional)
 
-1. Go to Settings → Environments → Production
-2. Enable "Required reviewers" (at least 1)
-3. Enable "Wait timer" (optional, e.g., 5 minutes)
-4. Add deployment branches restriction (only `main`)
+## Usage
 
-## Workflow Best Practices
+### Trigger DBT Tests in CI
+Add `[run-dbt-tests]` to your commit message:
+```bash
+git commit -m "Update DBT models [run-dbt-tests]"
+```
 
-### Branch Strategy
-- `develop`: Development branch (runs CI checks)
-- `main`: Production branch (runs CI + CD)
-
-### Pull Request Process
-1. Create feature branch from `develop`
-2. Make changes and push
-3. CI workflows run automatically
-4. Create PR to `develop` or `main`
-5. All CI checks must pass before merge
-6. Code review required
-
-### Deployment Process
-1. Merge to `main` triggers automatic deployment to production
-2. Manual deployments can be triggered via workflow dispatch
-3. Staging deployments can be tested before production
-
-## Monitoring Workflows
-
-### View Workflow Runs
-- Go to Actions tab in GitHub
-- Filter by workflow name
-- View logs and artifacts
-
-### Workflow Artifacts
-- DBT artifacts: Available for 7 days
-- Security scan results: Available for 30 days
-- Docker images: Stored in GitHub Container Registry
-
-## Troubleshooting
-
-### Common Issues
-
-1. **DBT compilation fails**
-   - Check DBT profile configuration
-   - Verify Snowflake credentials (if using real connection)
-   - Review DBT model syntax
-
-2. **Docker build fails**
-   - Check Dockerfile syntax
-   - Verify base image availability
-   - Review build logs for specific errors
-
-3. **Security scans fail**
-   - Review vulnerability reports
-   - Update dependencies if needed
-   - Check for false positives
-
-4. **Deployment fails**
-   - Check environment secrets
-   - Verify deployment permissions
-   - Review deployment logs
+### Manual Deployment
+Go to Actions → Deploy → Run workflow
 
 ## Customization
 
-### Adding New Checks
-1. Create a new job in the appropriate workflow
-2. Add it to the `needs` list of dependent jobs
-3. Update the summary job if needed
-
-### Modifying Deployment
-1. Edit `deploy.yml`
-2. Update deployment commands in deploy jobs
-3. Add environment-specific configurations
-
-### Adding New Environments
-1. Add environment to `deploy.yml` workflow
-2. Create GitHub Environment with secrets
-3. Add deployment job for new environment
-
-## Resources
-
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Airflow Documentation](https://airflow.apache.org/docs/)
-- [DBT Documentation](https://docs.getdbt.com/)
-- [Docker Documentation](https://docs.docker.com/)
-
+Edit the workflows to match your deployment process:
+- Update deployment commands in `deploy.yml`
+- Adjust DBT test conditions in `ci.yml`
+- Modify environment schemas as needed

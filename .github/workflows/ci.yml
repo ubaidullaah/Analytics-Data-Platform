@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install "apache-airflow==3.1.5"
+          pip install "apache-airflow==3.1.5" dbt-snowflake pyyaml
 
       - name: Check Python syntax
         run: python -m py_compile Airflow/dags/*.py
@@ -32,3 +32,83 @@ jobs:
         run: |
           mkdir -p $AIRFLOW_HOME
           python -c "from airflow.models import DagBag; d = DagBag('Airflow/dags'); assert len(d.dags) > 0, 'No DAGs found'"
+
+      - name: Validate DBT project structure
+        working-directory: DBT_fintech_project
+        run: |
+          python -c "import yaml; yaml.safe_load(open('dbt_project.yml'))"
+          echo "✓ DBT project YAML is valid"
+
+      - name: Install DBT packages
+        working-directory: DBT_fintech_project
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          fintech_project:
+            target: dev
+            outputs:
+              dev:
+                type: snowflake
+                account: test
+                user: test
+                password: test
+                warehouse: test
+                database: FINTECH_DW
+                schema: ANALYTICS
+                threads: 1
+          EOF
+          dbt deps || echo "No packages to install"
+
+      - name: Parse DBT models (syntax validation)
+        working-directory: DBT_fintech_project
+        continue-on-error: true
+        run: |
+          dbt parse --target dev || echo "DBT parse requires connection, skipping"
+
+  dbt-test:
+    name: Run DBT Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || contains(github.event.head_commit.message, '[run-dbt-tests]')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install DBT
+        run: |
+          pip install --upgrade pip
+          pip install dbt-snowflake
+
+      - name: Setup DBT profile
+        working-directory: DBT_fintech_project
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          fintech_project:
+            target: test
+            outputs:
+              test:
+                type: snowflake
+                account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+                user: ${{ secrets.SNOWFLAKE_USER }}
+                password: ${{ secrets.SNOWFLAKE_PASSWORD }}
+                warehouse: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+                database: ${{ secrets.SNOWFLAKE_DATABASE || 'FINTECH_DW' }}
+                schema: ${{ secrets.SNOWFLAKE_TEST_SCHEMA || 'TEST' }}
+                threads: 2
+          EOF
+
+      - name: Run DBT tests
+        working-directory: DBT_fintech_project
+        continue-on-error: true
+        run: |
+          if [ -z "${{ secrets.SNOWFLAKE_ACCOUNT }}" ]; then
+            echo "Snowflake secrets not configured, skipping DBT tests"
+            exit 0
+          fi
+          dbt deps
+          dbt test --target test

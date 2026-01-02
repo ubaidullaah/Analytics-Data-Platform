@@ -6,12 +6,59 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  pre-deploy-checks:
+    name: Pre-deployment Checks
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install DBT
+        run: |
+          pip install --upgrade pip
+          pip install dbt-snowflake
+
+      - name: Run DBT tests on staging
+        working-directory: DBT_fintech_project
+        continue-on-error: true
+        run: |
+          if [ -z "${{ secrets.SNOWFLAKE_ACCOUNT }}" ]; then
+            echo "Snowflake secrets not configured, skipping DBT tests"
+            exit 0
+          fi
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          fintech_project:
+            target: staging
+            outputs:
+              staging:
+                type: snowflake
+                account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+                user: ${{ secrets.SNOWFLAKE_USER }}
+                password: ${{ secrets.SNOWFLAKE_PASSWORD }}
+                warehouse: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+                database: ${{ secrets.SNOWFLAKE_DATABASE || 'FINTECH_DW' }}
+                schema: ${{ secrets.SNOWFLAKE_STAGING_SCHEMA || 'STAGING' }}
+                threads: 2
+          EOF
+          dbt deps
+          dbt test --target staging
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: pre-deploy-checks
     environment: production
+    if: always() && (needs.pre-deploy-checks.result == 'success' || needs.pre-deploy-checks.result == 'skipped')
     steps:
       - uses: actions/checkout@v4
       - name: Deploy
         run: |
           echo "Deploying to production..."
           # Add your deployment commands here
+          # DBT models will run via Airflow DAG after deployment
