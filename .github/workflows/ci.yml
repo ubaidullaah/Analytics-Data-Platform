@@ -21,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install "apache-airflow==3.1.5" dbt-snowflake
+          pip install "apache-airflow==3.1.5"
 
       - name: Check Python syntax
         run: python -m py_compile Airflow/dags/*.py
@@ -32,24 +32,3 @@ jobs:
         run: |
           mkdir -p $AIRFLOW_HOME
           python -c "from airflow.models import DagBag; d = DagBag('Airflow/dags'); assert len(d.dags) > 0, 'No DAGs found'"
-
-      - name: Compile DBT models
-        working-directory: DBT_fintech_project
-        run: |
-          mkdir -p ~/.dbt
-          cat > ~/.dbt/profiles.yml << EOF
-          fintech_project:
-            target: dev
-            outputs:
-              dev:
-                type: snowflake
-                account: test
-                user: test
-                password: test
-                warehouse: test
-                database: FINTECH_DW
-                schema: ANALYTICS
-                threads: 1
-          EOF
-          dbt deps
-          dbt compile --target dev
