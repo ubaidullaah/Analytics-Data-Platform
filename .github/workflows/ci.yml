@@ -103,7 +103,7 @@ jobs:
                 password: ${{ secrets.SNOWFLAKE_PASSWORD }}
                 warehouse: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
                 database: ${{ secrets.SNOWFLAKE_DATABASE || 'FINTECH_DW' }}
-                schema: ${{ secrets.SNOWFLAKE_TEST_SCHEMA || 'TEST' }}
+                schema: ${{ secrets.SNOWFLAKE_TEST_SCHEMA || 'ANALYTICS' }}
                 threads: 2
           EOF
 
@@ -116,5 +116,5 @@ jobs:
             exit 0
           fi
           dbt deps
-          echo "Running DBT tests against TEST schema (industry best practice)"
-          dbt test --target test || echo "DBT tests failed - ensure TEST schema exists with test data"
+          echo "Running DBT tests against ANALYTICS schema (actual schema)"
+          dbt test --target test || echo "DBT tests failed - ensure ANALYTICS schema exists with data"
